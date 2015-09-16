@@ -14,7 +14,7 @@ import (
 func main() {
 	myURL := os.Getenv("INFLUX_URL")
 	if myURL == "" {
-		myURL = "localhost"
+		myURL = "http://localhost:8086"
 	}
 
 	myDB := os.Getenv("INFLUX_DB")
@@ -29,8 +29,6 @@ func main() {
 
 	conf := client.Config{
 		URL: *u,
-		// Username: os.Getenv("INFLUX_USER"),
-		// Password: os.Getenv("INFLUX_PWD"),
 	}
 
 	con, err := client.NewClient(conf)
@@ -64,9 +62,9 @@ func writeRooms(con *client.Client, myDB string) {
 	for j := 0; j < 8; j++ {
 		for k := 0; k < 10; k++ {
 
-			// Now we'll pick a "starting temperature"
+			// Now we'll pick a "starting temperature and humidity"
 			temp := rand.Intn(100)/10 + 20.0
-
+			humid := rand.Intn(200)/10 + 20.0
 			// This all starts from a month ago, so we'll find now and take a month off
 			now := time.Now()
 			secs := now.Unix() - (60 * 60 * 24 * 30)
@@ -91,6 +89,20 @@ func writeRooms(con *client.Client, myDB string) {
 				default:
 				}
 
+				// And we do something similar for the humidity
+				switch rand.Intn(10) {
+				case 0, 1, 2, 3, 4, 5, 6:
+					hchange := rand.Intn(11) - 5
+					humid = humid - (hchange / 10)
+					if humid < 5 {
+						humid = 5.0
+					}
+					if humid > 40 {
+						humid = 40.0
+					}
+				default:
+				}
+
 				// New we can create the point of data at batchptr. These all go in a
 				// We fill in the room with a name from our array above, set the
 				// level and set our created timestamp.
@@ -102,7 +114,8 @@ func writeRooms(con *client.Client, myDB string) {
 						"level": strconv.Itoa(k),
 					},
 					Fields: map[string]interface{}{
-						"temp": temp,
+						"temp":  temp,
+						"humid": humid,
 					},
 					Time:      time.Unix(secs, 0),
 					Precision: "s",
